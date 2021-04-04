@@ -1,0 +1,32 @@
+{
+  "name": "lireddit-client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "gen": "graphql-codegen --config codegen.yml"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^1.4.2",
+    "@emotion/react": "^11.1.5",
+    "@emotion/styled": "^11.1.5",
+    "@urql/exchange-graphcache": "^4.0.0",
+    "framer-motion": "^4.0.3",
+    "graphql": "^15.5.0",
+    "next": "10.1.2",
+    "react": "17.0.2",
+    "react-dom": "17.0.2",
+    "react-hook-form": "^6.15.5",
+    "urql": "^2.0.1"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "1.21.3",
+    "@graphql-codegen/typescript": "1.21.1",
+    "@graphql-codegen/typescript-operations": "1.17.15",
+    "@graphql-codegen/typescript-urql": "^2.0.5",
+    "@types/react": "^17.0.3",
+    "typescript": "^4.2.3"
+  }
+}
