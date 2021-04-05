@@ -12,6 +12,8 @@ import { useForm } from "react-hook-form";
 import Wrapper from "../components/Wrapper";
 import { useRegisterMutation } from "../generated/graphql";
 import { useRouter } from "next/router";
+import { withUrqlClient } from "next-urql";
+import { createUrqlClient } from "../utils/createUrqlClient";
 
 interface registerProps {}
 
@@ -132,4 +134,4 @@ const Register: React.FC<registerProps> = ({}) => {
         </Wrapper>
     );
 };
-export default Register;
+export default withUrqlClient(createUrqlClient)(Register);

@@ -53,12 +53,12 @@ export type MutationDeletePostArgs = {
 
 
 export type MutationRegisterArgs = {
-  options: RegisterInput;
+  input: RegisterInput;
 };
 
 
 export type MutationLoginArgs = {
-  options: LoginInput;
+  input: LoginInput;
 };
 
 export type Post = {
@@ -85,14 +85,17 @@ export type QueryPostArgs = {
 export type RegisterInput = {
   username: Scalars['String'];
   password: Scalars['String'];
+  firstName: Scalars['String'];
+  lastName: Scalars['String'];
 };
 
 export type User = {
   __typename?: 'User';
   id: Scalars['ID'];
+  username: Scalars['String'];
+  name: Scalars['String'];
   createdAt: Scalars['String'];
   updatedAt: Scalars['String'];
-  username: Scalars['String'];
 };
 
 export type UserResponse = {
@@ -103,7 +106,7 @@ export type UserResponse = {
 
 export type RegularUserFragment = (
   { __typename?: 'User' }
-  & Pick<User, 'id' | 'username'>
+  & Pick<User, 'id' | 'username' | 'name'>
 );
 
 export type LoginMutationVariables = Exact<{
@@ -137,6 +140,8 @@ export type LogoutMutation = (
 export type RegisterMutationVariables = Exact<{
   username: Scalars['String'];
   password: Scalars['String'];
+  firstName: Scalars['String'];
+  lastName: Scalars['String'];
 }>;
 
 
@@ -165,15 +170,27 @@ export type MeQuery = (
   )> }
 );
 
+export type PostsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type PostsQuery = (
+  { __typename?: 'Query' }
+  & { posts: Array<(
+    { __typename?: 'Post' }
+    & Pick<Post, 'id' | 'title' | 'updatedAt'>
+  )> }
+);
+
 export const RegularUserFragmentDoc = gql`
     fragment RegularUser on User {
   id
   username
+  name
 }
     `;
 export const LoginDocument = gql`
     mutation Login($username: String!, $password: String!) {
-  login(options: {username: $username, password: $password}) {
+  login(input: {username: $username, password: $password}) {
     errors {
       field
       message
@@ -198,8 +215,10 @@ export function useLogoutMutation() {
   return Urql.useMutation<LogoutMutation, LogoutMutationVariables>(LogoutDocument);
 };
 export const RegisterDocument = gql`
-    mutation Register($username: String!, $password: String!) {
-  register(options: {username: $username, password: $password}) {
+    mutation Register($username: String!, $password: String!, $firstName: String!, $lastName: String!) {
+  register(
+    input: {username: $username, password: $password, firstName: $firstName, lastName: $lastName}
+  ) {
     errors {
       field
       message
@@ -224,4 +243,17 @@ export const MeDocument = gql`
 
 export function useMeQuery(options: Omit<Urql.UseQueryArgs<MeQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<MeQuery>({ query: MeDocument, ...options });
+};
+export const PostsDocument = gql`
+    query Posts {
+  posts {
+    id
+    title
+    updatedAt
+  }
+}
+    `;
+
+export function usePostsQuery(options: Omit<Urql.UseQueryArgs<PostsQueryVariables>, 'query'> = {}) {
+  return Urql.useQuery<PostsQuery>({ query: PostsDocument, ...options });
 };

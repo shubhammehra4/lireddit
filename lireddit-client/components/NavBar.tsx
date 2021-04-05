@@ -4,11 +4,12 @@ import NextLink from "next/link";
 import { DarkModeSwitch } from "./DarkModeSwitch";
 import { useLogoutMutation, useMeQuery } from "../generated/graphql";
 import { Button } from "@chakra-ui/button";
+import { isServer } from "../utils/isServer";
 
 interface navbarProps {}
 
 const NavBar: React.FC<navbarProps> = ({}) => {
-    const [{ data, fetching }] = useMeQuery();
+    const [{ data, fetching }] = useMeQuery({ pause: isServer() });
     const [{ fetching: logoutfetching }, logout] = useLogoutMutation();
     let body = null;
     if (fetching) {
