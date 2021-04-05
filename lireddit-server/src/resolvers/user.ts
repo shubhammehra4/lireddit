@@ -4,7 +4,6 @@ import {
     Arg,
     Ctx,
     Field,
-    InputType,
     Mutation,
     ObjectType,
     Query,
@@ -12,23 +11,8 @@ import {
 } from "type-graphql";
 import argon2 from "argon2";
 import { COOKIE_NAME } from "../constants";
-// import { EntityManager } from "@mikro-orm/postgresql";
-
-@InputType()
-class RegisterInput {
-    @Field()
-    username: string;
-    @Field()
-    password: string;
-}
-
-@InputType()
-class LoginInput {
-    @Field()
-    username: string;
-    @Field()
-    password: string;
-}
+import { RegisterInput } from "./register/RegisterInput";
+import { LoginInput } from "./login/LoginInput";
 
 @ObjectType()
 class FieldError {
@@ -62,10 +46,10 @@ export class UserResolver {
 
     @Mutation(() => UserResponse)
     async register(
-        @Arg("options") options: RegisterInput,
+        @Arg("input") input: RegisterInput,
         @Ctx() { em, req }: MyContext
     ): Promise<UserResponse> {
-        if (options.username.length <= 2) {
+        if (input.username.length <= 2) {
             return {
                 errors: [
                     {
@@ -76,7 +60,7 @@ export class UserResolver {
             };
         }
 
-        if (options.password.length <= 3) {
+        if (input.password.length <= 2) {
             return {
                 errors: [
                     {
@@ -86,9 +70,11 @@ export class UserResolver {
                 ],
             };
         }
-        const hashedPassword = await argon2.hash(options.password);
+        const hashedPassword = await argon2.hash(input.password);
         const user = em.create(User, {
-            username: options.username,
+            username: input.username,
+            firstName: input.firstName,
+            lastName: input.lastName,
             password: hashedPassword,
         });
         // let user'
@@ -106,7 +92,7 @@ export class UserResolver {
             // user = result[0];
             await em.persistAndFlush(user);
         } catch (err) {
-            if (err.code === "23505" || err.detail.includes("already exists")) {
+            if (err.code === "23505") {
                 //duplicate key
                 return {
                     errors: [
@@ -125,10 +111,10 @@ export class UserResolver {
 
     @Mutation(() => UserResponse)
     async login(
-        @Arg("options") options: LoginInput,
+        @Arg("input") input: LoginInput,
         @Ctx() { em, req }: MyContext
     ): Promise<UserResponse> {
-        const user = await em.findOne(User, { username: options.username });
+        const user = await em.findOne(User, { username: input.username });
         if (!user) {
             return {
                 errors: [
@@ -139,7 +125,7 @@ export class UserResolver {
                 ],
             };
         }
-        const valid = await argon2.verify(user.password, options.password);
+        const valid = await argon2.verify(user.password, input.password);
         if (!valid) {
             return {
                 errors: [
