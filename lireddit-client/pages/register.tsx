@@ -20,6 +20,7 @@ interface registerProps {}
 type registerInput = {
     username: string;
     password: string;
+    email: string;
 };
 
 const Register: React.FC<registerProps> = ({}) => {
@@ -46,6 +47,11 @@ const Register: React.FC<registerProps> = ({}) => {
                         type: "server",
                         message: err.message,
                     });
+                } else if (err.field == "email") {
+                    setError("email", {
+                        type: "server",
+                        message: err.message,
+                    });
                 }
             });
         } else if (response.data?.register.user) {
@@ -56,22 +62,27 @@ const Register: React.FC<registerProps> = ({}) => {
     return (
         <Wrapper variant="small">
             <form onSubmit={handleSubmit(onSubmit)}>
-                {/* <FormControl isInvalid={errors.email}>
+                <FormControl isInvalid={errors.email?.message !== undefined}>
                     <FormLabel htmlFor="email">Email</FormLabel>
                     <Input
                         id="email"
                         name="email"
                         ref={register({
-                            required: true,
-                            minLength: 3,
-                            maxLength: 150,
-                            pattern: /^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/,
+                            required: "Email is Required",
+                            maxLength: {
+                                value: 255,
+                                message: "Email is too long!",
+                            },
+                            pattern: {
+                                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                message: "Invalid Email",
+                            },
                         })}
                     />
                     <FormErrorMessage>
-                        {errors.email && "Valid Email Required"}
+                        {errors.email && errors.email.message}
                     </FormErrorMessage>
-                </FormControl> */}
+                </FormControl>
                 <FormControl isInvalid={errors.username?.message !== undefined}>
                     <FormLabel htmlFor="username">Username</FormLabel>
                     <Input
@@ -84,8 +95,12 @@ const Register: React.FC<registerProps> = ({}) => {
                                 message: "Username is too short!",
                             },
                             maxLength: {
-                                value: 150,
+                                value: 50,
                                 message: "Username is too long!",
+                            },
+                            pattern: {
+                                value: /^[A-Za-z0-9]+(?:[_.-][A-Za-z0-9]+)*$/,
+                                message: "Username is Invalid",
                             },
                         })}
                     />
@@ -107,7 +122,7 @@ const Register: React.FC<registerProps> = ({}) => {
                                     message: "Password is too short!",
                                 },
                                 maxLength: {
-                                    value: 250,
+                                    value: 255,
                                     message: "Password is too long!",
                                 },
                             })}

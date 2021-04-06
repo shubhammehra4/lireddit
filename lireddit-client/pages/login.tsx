@@ -18,7 +18,7 @@ import { createUrqlClient } from "../utils/createUrqlClient";
 interface loginProps {}
 
 type loginInput = {
-    username: string;
+    usernameOrEmail: string;
     password: string;
 };
 
@@ -41,8 +41,8 @@ const Login: React.FC<loginProps> = ({}) => {
         const response = await reg(values);
         if (response.data?.login.errors) {
             response.data.login.errors.map((err) => {
-                if (err.field === "username") {
-                    setError("username", {
+                if (err.field === "usernameOrEmail") {
+                    setError("usernameOrEmail", {
                         type: "server",
                         message: err.message,
                     });
@@ -61,41 +61,21 @@ const Login: React.FC<loginProps> = ({}) => {
     return (
         <Wrapper variant="small">
             <form onSubmit={handleSubmit(onSubmit)}>
-                {/* <FormControl isInvalid={errors.email}>
-                    <FormLabel htmlFor="email">Email</FormLabel>
+                <FormControl
+                    isInvalid={errors.usernameOrEmail?.message !== undefined}>
+                    <FormLabel htmlFor="usernameOrEmail">
+                        Username/Email
+                    </FormLabel>
                     <Input
-                        id="email"
-                        name="email"
+                        id="usernameOrEmail"
+                        name="usernameOrEmail"
                         ref={register({
-                            required: true,
-                            minLength: 3,
-                            maxLength: 150,
-                            pattern: /^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/,
+                            required: "Username/Email is Required",
                         })}
                     />
                     <FormErrorMessage>
-                        {errors.email && "Valid Email Required"}
-                    </FormErrorMessage>
-                </FormControl> */}
-                <FormControl isInvalid={errors.username?.message !== undefined}>
-                    <FormLabel htmlFor="username">Username</FormLabel>
-                    <Input
-                        id="username"
-                        name="username"
-                        ref={register({
-                            required: "Username is Required",
-                            minLength: {
-                                value: 2,
-                                message: "Username is too short!",
-                            },
-                            maxLength: {
-                                value: 150,
-                                message: "Username is too long!",
-                            },
-                        })}
-                    />
-                    <FormErrorMessage>
-                        {errors.username && errors.username.message}
+                        {errors.usernameOrEmail &&
+                            errors.usernameOrEmail.message}
                     </FormErrorMessage>
                 </FormControl>
                 <FormControl isInvalid={errors.password?.message !== undefined}>

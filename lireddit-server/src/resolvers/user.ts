@@ -10,9 +10,11 @@ import {
     Resolver,
 } from "type-graphql";
 import argon2 from "argon2";
-import { COOKIE_NAME } from "../constants";
+import { cookieName } from "../constants";
 import { RegisterInput } from "./register/RegisterInput";
 import { LoginInput } from "./login/LoginInput";
+import { validateRegister } from "../utils/validateRegister";
+import { sendEmail } from "../utils/sendEmail";
 
 @ObjectType()
 class FieldError {
@@ -34,6 +36,24 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+    @Mutation(() => Boolean)
+    async forgotPassword(
+        @Arg("email") email: string,
+        @Ctx() { em }: MyContext
+    ) {
+        const user = await em.findOne(User, { email });
+        if (!user) {
+            return true;
+        }
+        const token = "hyfcauygdaciugiucds";
+        await sendEmail(
+            email,
+            `<a href="http://localhost:3000/changepassword/${token}">reset password</a>`
+        );
+
+        return true;
+    }
+
     @Query(() => User, { nullable: true })
     async me(@Ctx() { req, em }: MyContext) {
         if (!req.session.userId) {
@@ -49,32 +69,15 @@ export class UserResolver {
         @Arg("input") input: RegisterInput,
         @Ctx() { em, req }: MyContext
     ): Promise<UserResponse> {
-        if (input.username.length <= 2) {
-            return {
-                errors: [
-                    {
-                        field: "username",
-                        message: "username is invalid",
-                    },
-                ],
-            };
-        }
+        const errors = validateRegister(input);
 
-        if (input.password.length <= 2) {
-            return {
-                errors: [
-                    {
-                        field: "password",
-                        message: "password is too short",
-                    },
-                ],
-            };
+        if (errors) {
+            return { errors };
         }
         const hashedPassword = await argon2.hash(input.password);
         const user = em.create(User, {
             username: input.username,
-            firstName: input.firstName,
-            lastName: input.lastName,
+            email: input.email,
             password: hashedPassword,
         });
         // let user'
@@ -94,6 +97,16 @@ export class UserResolver {
         } catch (err) {
             if (err.code === "23505") {
                 //duplicate key
+                if (err.detail.includes("email")) {
+                    return {
+                        errors: [
+                            {
+                                field: "email",
+                                message: "Email Already Registered!",
+                            },
+                        ],
+                    };
+                }
                 return {
                     errors: [
                         {
@@ -114,13 +127,18 @@ export class UserResolver {
         @Arg("input") input: LoginInput,
         @Ctx() { em, req }: MyContext
     ): Promise<UserResponse> {
-        const user = await em.findOne(User, { username: input.username });
+        const user = await em.findOne(
+            User,
+            input.usernameOrEmail.includes("@")
+                ? { email: input.usernameOrEmail }
+                : { username: input.usernameOrEmail }
+        );
         if (!user) {
             return {
                 errors: [
                     {
-                        field: "username",
-                        message: "Username is not registered!",
+                        field: "usernameOrEmail",
+                        message: "Username/Email is not registered!",
                     },
                 ],
             };
@@ -144,7 +162,7 @@ export class UserResolver {
     logout(@Ctx() { req, res }: MyContext): Promise<boolean> {
         return new Promise((resolve) =>
             req.session.destroy((err) => {
-                res.clearCookie(COOKIE_NAME);
+                res.clearCookie(cookieName);
                 if (err) {
                     console.log("Logout Error:", err); //!
                     resolve(false);
