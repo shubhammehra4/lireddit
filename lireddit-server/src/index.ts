@@ -23,7 +23,6 @@ import { Post } from "./entities/Post";
 import { User } from "./entities/User";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
-import { MyContext } from "./types";
 import { Updoot } from "./entities/Updoot";
 
 const main = async () => {
@@ -78,7 +77,13 @@ const main = async () => {
             resolvers: [PostResolver, UserResolver],
             validate: false,
         }),
-        context: ({ req, res }): MyContext => ({ req, res, redis }),
+        context: ({ req, res }) => ({
+            req,
+            res,
+            redis,
+            // userLoader: createUserLoader(),
+            // updootStatusLoader: createVoteStatusLoader(),
+        }),
     });
 
     //? Base Resolver time to resolve

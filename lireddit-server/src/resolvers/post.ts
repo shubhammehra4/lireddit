@@ -28,6 +28,27 @@ export class PostResolver {
         return root.text.slice(0, 50) + "...";
     }
 
+    //? Alternative to inner join but requires data loaders
+    // @FieldResolver(() => User)
+    // creator(@Root() post: Post, @Ctx() { userLoader }: MyContext) {
+    //     return userLoader.load(post.creatorId);
+    // }
+
+    // @FieldResolver(() => Int, { nullable: true })
+    // async voteStatus(
+    //     @Root() post: Post,
+    //     @Ctx() { updootStatusLoader, req }: MyContext
+    // ) {
+    //     if (!req.session.userId) {
+    //         return null;
+    //     }
+    //     const updoot = await updootStatusLoader.load({
+    //         postId: post.id,
+    //         userId: req.session.userId,
+    //     });
+    //     return updoot ? updoot.value : null;
+    // }
+
     @Mutation(() => Boolean)
     @UseMiddleware(isAuth)
     async vote(

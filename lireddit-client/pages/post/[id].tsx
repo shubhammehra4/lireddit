@@ -33,7 +33,8 @@ const Post: React.FC<PostProps> = ({}) => {
     return (
         <Wrapper>
             <Heading>{data.post.title}</Heading>
-            {data.post.text}
+            <p>{data.post.text}</p>
+            {data.post.points}
         </Wrapper>
     );
 };

@@ -4,10 +4,10 @@ import React from "react";
 import { useLogoutMutation, useMeQuery } from "../generated/graphql";
 import { isServer } from "../utils/isServer";
 import { DarkModeSwitch } from "./DarkModeSwitch";
+import { useRouter } from "next/router";
 
-interface navbarProps {}
-
-const NavBar: React.FC<navbarProps> = ({}) => {
+const NavBar: React.FC<{}> = ({}) => {
+    const router = useRouter();
     const [{ data, fetching }] = useMeQuery({ pause: isServer() }); // CSR
     const [{ fetching: logoutfetching }, logout] = useLogoutMutation();
     let body = null;
@@ -31,7 +31,10 @@ const NavBar: React.FC<navbarProps> = ({}) => {
             <Flex>
                 <Box>{data.me.username}</Box>
                 <Button
-                    onClick={() => logout()}
+                    onClick={async () => {
+                        await logout();
+                        router.reload();
+                    }}
                     isLoading={logoutfetching}
                     mx={3}
                     variant="link">
