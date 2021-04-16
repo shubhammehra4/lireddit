@@ -5,7 +5,7 @@ export const validateRegister = (input: RegisterInput) => {
         return [
             {
                 field: "email",
-                message: "email is invalid",
+                message: "Email is Invalid",
             },
         ];
     }
@@ -13,7 +13,7 @@ export const validateRegister = (input: RegisterInput) => {
         return [
             {
                 field: "username",
-                message: "username is invalid",
+                message: "Username is Invalid",
             },
         ];
     }
@@ -22,7 +22,7 @@ export const validateRegister = (input: RegisterInput) => {
         return [
             {
                 field: "password",
-                message: "password is too short",
+                message: "Password is too short",
             },
         ];
     }

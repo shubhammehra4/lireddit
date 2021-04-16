@@ -1,59 +1,64 @@
 import "reflect-metadata";
 import dotenv from "dotenv";
-dotenv.config({ path: __dirname + "/.env" });
-import { MikroORM } from "@mikro-orm/core";
-import mikroConfig from "./mikro-orm.config";
-import express from "express";
+dotenv.config();
+import path from "path";
 import { ApolloServer } from "apollo-server-express";
-import { buildSchema } from "type-graphql";
-import { PostResolver } from "./resolvers/post";
-import { UserResolver } from "./resolvers/user";
-import redis from "redis";
-import session from "express-session";
 import connectRedis from "connect-redis";
-import { MyContext } from "./types";
 import cors from "cors";
+import express from "express";
+import session from "express-session";
+import Redis from "ioredis";
+import { buildSchema } from "type-graphql";
+import { createConnection } from "typeorm";
+import pino from "pino";
 import {
     clientURL,
     cookieName,
     port,
     redisHost,
-    redisPassword,
-    redisPort,
     sessionSecret,
     __prod__,
 } from "./constants";
-// import { User } from "./entities/User";
+import { Post } from "./entities/Post";
+import { User } from "./entities/User";
+import { PostResolver } from "./resolvers/post";
+import { UserResolver } from "./resolvers/user";
+import { MyContext } from "./types";
+import { Updoot } from "./entities/Updoot";
 
 const main = async () => {
-    const orm = await MikroORM.init(mikroConfig);
-    // await orm.em.nativeDelete(User, {});
-    await orm.getMigrator().up();
+    //TODO: Move to ormconfig
+    const conn = await createConnection({
+        type: "postgres",
+        database: "lireddit2",
+        username: "postgres",
+        password: "qwerty",
+        logging: "all",
+        synchronize: true,
+        maxQueryExecutionTime: 250,
+        migrations: [path.join(__dirname, "./migrations/*")],
+        entities: [Post, User, Updoot],
+    });
+
+    await conn.runMigrations();
+
+    // await Post.delete({});
 
     const app = express();
 
-    const RedisStore = connectRedis(session);
-    const redisClient = redis.createClient({
-        host: redisHost,
-        port: redisPort,
-        password: redisPassword,
-    });
-    redisClient.on("error", function (err) {
+    const RedisStore = connectRedis(session); //? Setup Redis Store with session
+    const redis = new Redis(redisHost); //? connects to upstash
+    redis.on("error", function (err) {
         throw err;
     });
 
-    app.use(
-        cors({
-            origin: clientURL,
-            credentials: true,
-        })
-    );
+    app.use(cors({ origin: clientURL, credentials: true })); //? CORS Setup
 
     app.use(
         session({
             name: cookieName,
             store: new RedisStore({
-                client: redisClient,
+                client: redis,
                 disableTouch: true,
             }),
             cookie: {
@@ -73,16 +78,42 @@ const main = async () => {
             resolvers: [PostResolver, UserResolver],
             validate: false,
         }),
-        context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
+        context: ({ req, res }): MyContext => ({ req, res, redis }),
     });
 
-    apolloServer.applyMiddleware({
-        app,
-        cors: false,
-    });
+    //? Base Resolver time to resolve
+    if (!__prod__) {
+        const logger = pino({
+            prettyPrint: true,
+        });
+
+        app.use("/graphql", (req, res, next) => {
+            const startHrTime = process.hrtime();
+
+            res.on("finish", () => {
+                if (req.body && req.body.operationName) {
+                    const elapsedHrTime = process.hrtime(startHrTime);
+                    const elapsedTimeInMs =
+                        elapsedHrTime[0] * 1000 + elapsedHrTime[1] / 1e6;
+                    if (req.body.operationName !== "IntrospectionQuery") {
+                        logger.info({
+                            type: "Time Tracing",
+                            name: req.body.operationName,
+                            ms: elapsedTimeInMs,
+                        });
+                    }
+                }
+            });
+
+            next();
+        });
+    }
+
+    apolloServer.applyMiddleware({ app, cors: false });
 
     app.listen(port, () => {
-        console.log(`🚀 Server Running.....`);
+        console.log(`🚀 Server Running.........`);
+        console.log(`http://localhost:4000/graphql`);
     });
 };
 
