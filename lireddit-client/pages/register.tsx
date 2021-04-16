@@ -1,29 +1,21 @@
 import {
+    Button,
     FormControl,
+    FormErrorMessage,
     FormLabel,
     Input,
-    FormErrorMessage,
-    Button,
-    InputRightElement,
     InputGroup,
+    InputRightElement,
 } from "@chakra-ui/react";
+import { withUrqlClient } from "next-urql";
+import { useRouter } from "next/router";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import Wrapper from "../components/Wrapper";
-import { useRegisterMutation } from "../generated/graphql";
-import { useRouter } from "next/router";
-import { withUrqlClient } from "next-urql";
+import { RegisterInput, useRegisterMutation } from "../generated/graphql";
 import { createUrqlClient } from "../utils/createUrqlClient";
 
-interface registerProps {}
-
-type registerInput = {
-    username: string;
-    password: string;
-    email: string;
-};
-
-const Register: React.FC<registerProps> = ({}) => {
+const Register: React.FC<{}> = ({}) => {
     const router = useRouter();
     const [show, setShow] = useState(false);
     const handleClick = () => setShow(!show);
@@ -33,13 +25,13 @@ const Register: React.FC<registerProps> = ({}) => {
         setError,
         clearErrors,
         formState: { errors, isSubmitting, isSubmitSuccessful },
-    } = useForm<registerInput>();
+    } = useForm<RegisterInput>();
 
     const [, reg] = useRegisterMutation();
 
-    async function onSubmit(values: registerInput) {
+    async function onSubmit(values: RegisterInput) {
         clearErrors();
-        const response = await reg(values);
+        const response = await reg({ input: values });
         if (response.data?.register.errors) {
             response.data.register.errors.map((err) => {
                 if (err.field === "username") {

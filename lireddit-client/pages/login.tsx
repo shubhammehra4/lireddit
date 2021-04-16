@@ -1,28 +1,24 @@
 import {
+    Box,
+    Button,
     FormControl,
+    FormErrorMessage,
     FormLabel,
     Input,
-    FormErrorMessage,
-    Button,
-    InputRightElement,
     InputGroup,
+    InputRightElement,
+    Link,
 } from "@chakra-ui/react";
+import { withUrqlClient } from "next-urql";
+import NextLink from "next/link";
+import { useRouter } from "next/router";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import Wrapper from "../components/Wrapper";
-import { useLoginMutation } from "../generated/graphql";
-import { useRouter } from "next/router";
-import { withUrqlClient } from "next-urql";
+import { LoginInput, useLoginMutation } from "../generated/graphql";
 import { createUrqlClient } from "../utils/createUrqlClient";
 
-interface loginProps {}
-
-type loginInput = {
-    usernameOrEmail: string;
-    password: string;
-};
-
-const Login: React.FC<loginProps> = ({}) => {
+const Login: React.FC<{}> = ({}) => {
     const router = useRouter();
     const [show, setShow] = useState(false);
     const handleClick = () => setShow(!show);
@@ -32,13 +28,13 @@ const Login: React.FC<loginProps> = ({}) => {
         setError,
         clearErrors,
         formState: { errors, isSubmitting, isSubmitSuccessful },
-    } = useForm<loginInput>();
+    } = useForm<LoginInput>();
 
     const [, reg] = useLoginMutation();
 
-    async function onSubmit(values: loginInput) {
+    async function onSubmit(values: LoginInput) {
         clearErrors();
-        const response = await reg(values);
+        const response = await reg({ input: values });
         if (response.data?.login.errors) {
             response.data.login.errors.map((err) => {
                 if (err.field === "usernameOrEmail") {
@@ -54,7 +50,11 @@ const Login: React.FC<loginProps> = ({}) => {
                 }
             });
         } else if (response.data?.login.user) {
-            router.push("/");
+            if (typeof router.query.next === "string") {
+                router.push(router.query.next);
+            } else {
+                router.push("/");
+            }
         }
     }
 
@@ -99,6 +99,11 @@ const Login: React.FC<loginProps> = ({}) => {
                         {errors.password && errors.password.message}
                     </FormErrorMessage>
                 </FormControl>
+                <Box textAlign="right" mt={3}>
+                    <NextLink href="/forgot-password">
+                        <Link color="blue">forgot password?</Link>
+                    </NextLink>
+                </Box>
                 <Button
                     mt={4}
                     colorScheme="teal"

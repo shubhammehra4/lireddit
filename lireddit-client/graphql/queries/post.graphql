@@ -1,7 +1,14 @@
-query Posts {
-    posts {
+query Post($id: ID!) {
+    post(id: $id) {
         id
         title
-        updatedAt
+        text
+        points
+        createdAt
+        voteStatus
+        creator {
+            id
+            username
+        }
     }
 }
