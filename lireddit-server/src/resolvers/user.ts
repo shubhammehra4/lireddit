@@ -1,127 +1,18 @@
 import argon2 from "argon2";
-import {
-    Arg,
-    Ctx,
-    Field,
-    Mutation,
-    ObjectType,
-    Query,
-    Resolver,
-} from "type-graphql";
+import { Arg, Ctx, Mutation, Query, Resolver } from "type-graphql";
+import { getConnection } from "typeorm";
 import { v4 } from "uuid";
 import { cookieName, FORGOT_PASSWORD_PREFIX } from "../constants";
 import { User } from "../entities/User";
 import { MyContext } from "../types";
 import { sendEmail } from "../utils/sendEmail";
 import { validateRegister } from "../utils/validateRegister";
-import { LoginInput } from "./login/LoginInput";
-import { RegisterInput } from "./register/RegisterInput";
-
-@ObjectType()
-class FieldError {
-    @Field()
-    field: string;
-
-    @Field()
-    message: string;
-}
-
-@ObjectType()
-class UserResponse {
-    @Field(() => [FieldError], { nullable: true })
-    errors?: FieldError[];
-
-    @Field(() => User, { nullable: true })
-    user?: User;
-}
+import { LoginInput } from "./inputs/LoginInput";
+import { RegisterInput } from "./inputs/RegisterInput";
+import { UserResponse } from "./responses/UserResponse";
 
 @Resolver()
 export class UserResolver {
-    @Mutation(() => UserResponse)
-    async changePassword(
-        @Arg("token") token: string,
-        @Arg("newPassword") newPassword: string,
-        @Ctx() { redis, req }: MyContext
-    ): Promise<UserResponse> {
-        if (newPassword.length <= 2) {
-            return {
-                errors: [
-                    {
-                        field: "newPassword",
-                        message: "password is too short",
-                    },
-                ],
-            };
-        }
-        const key = FORGOT_PASSWORD_PREFIX + token;
-        const userId = await redis.get(key);
-
-        if (!userId) {
-            return {
-                errors: [
-                    {
-                        field: "token",
-                        message: "Token Expired",
-                    },
-                ],
-            };
-        }
-        const uId = parseInt(userId);
-        const user = await User.findOne(uId);
-
-        if (!user) {
-            return {
-                errors: [
-                    {
-                        field: "token",
-                        message: "user no longer exists",
-                    },
-                ],
-            };
-        }
-
-        await User.update(
-            { id: uId },
-            { password: await argon2.hash(newPassword) }
-        );
-        await redis.del(key); //? Token can only be used once
-        req.session.userId = user.id; //? log in automatically
-
-        return { user };
-    }
-
-    @Mutation(() => Boolean)
-    async forgotPassword(
-        @Arg("email") email: string,
-        @Ctx() { redis }: MyContext
-    ) {
-        const user = await User.findOne({ where: { email } });
-        if (!user) {
-            return true;
-        }
-        const token = v4();
-        await redis.set(
-            FORGOT_PASSWORD_PREFIX + token,
-            user.id,
-            "ex",
-            1000 * 60 * 60 * 24
-        ); //! 1 day
-        await sendEmail(
-            email,
-            `<a href="http://localhost:3000/change-password/${token}">reset password</a>`
-        );
-
-        return true;
-    }
-
-    @Query(() => User, { nullable: true })
-    me(@Ctx() { req }: MyContext) {
-        if (!req.session.userId) {
-            return null;
-        }
-        return User.findOne(req.session.userId);
-    }
-
     @Mutation(() => UserResponse)
     async register(
         @Arg("input") input: RegisterInput,
@@ -133,27 +24,20 @@ export class UserResolver {
             return { errors };
         }
         const hashedPassword = await argon2.hash(input.password);
-        let user;
+        let user: any;
         try {
-            //! Similar
-            const result = await User.create({
-                username: input.username,
-                email: input.email,
-                password: hashedPassword,
-            }).save();
-            // const result = await getConnection()
-            //     .createQueryBuilder()
-            //     .insert()
-            //     .into(User)
-            //     .values({
-            //         username: input.username,
-            //         email: input.email,
-            //         password: hashedPassword,
-            //     })
-            //     .returning("*")
-            //     .execute();
-            // user = result.raw[0];
-            user = result;
+            const result = await getConnection()
+                .createQueryBuilder()
+                .insert()
+                .into(User)
+                .values({
+                    username: input.username,
+                    email: input.email,
+                    password: hashedPassword,
+                })
+                .returning("*")
+                .execute();
+            user = result.raw[0];
         } catch (err) {
             //? duplicate key
             if (err.code === "23505") {
@@ -177,6 +61,7 @@ export class UserResolver {
                 };
             }
         }
+        //TODO: Confirmation Email
         if (user) {
             req.session.userId = user.id;
         }
@@ -220,12 +105,102 @@ export class UserResolver {
     }
 
     @Mutation(() => Boolean)
+    async forgotPassword(
+        @Arg("email") email: string,
+        @Ctx() { redis }: MyContext
+    ) {
+        const user = await User.findOne({ where: { email } });
+        if (!user) {
+            return true;
+        }
+        const token = v4();
+        await redis.set(
+            FORGOT_PASSWORD_PREFIX + token,
+            user.id,
+            "ex",
+            1000 * 60 * 60 * 24
+        ); //! 1 day
+        await sendEmail(
+            email,
+            `<a href="http://localhost:3000/change-password/${token}">reset password</a>`,
+            "Forgot Password"
+        );
+
+        return true;
+    }
+
+    @Mutation(() => UserResponse)
+    async changePassword(
+        @Arg("token") token: string,
+        @Arg("newPassword") newPassword: string,
+        @Ctx() { redis, req }: MyContext
+    ): Promise<UserResponse> {
+        if (newPassword.length <= 2) {
+            return {
+                errors: [
+                    { field: "newPassword", message: "password is too short" },
+                ],
+            };
+        }
+        const key = FORGOT_PASSWORD_PREFIX + token;
+        const userId = await redis.get(key);
+
+        if (!userId) {
+            return {
+                errors: [
+                    {
+                        field: "token",
+                        message: "Token Expired",
+                    },
+                ],
+            };
+        }
+        const uId = parseInt(userId);
+        const user = await User.findOne(uId);
+
+        if (!user) {
+            return {
+                errors: [
+                    {
+                        field: "token",
+                        message: "user no longer exists",
+                    },
+                ],
+            };
+        }
+
+        const newHashedPassword = await argon2.hash(newPassword);
+        await getConnection()
+            .createQueryBuilder()
+            .update(User)
+            .set({ password: newHashedPassword })
+            .where("id = :id", { id: uId })
+            .execute();
+        // await User.update(
+        //     { id: uId },
+        //     { password: await argon2.hash(newPassword) }
+        // );
+        await redis.del(key); //? Token can only be used once
+        req.session.userId = user.id; //? log in automatically
+
+        return { user };
+    }
+
+    @Query(() => User, { nullable: true })
+    me(@Ctx() { req }: MyContext) {
+        if (!req.session.userId) {
+            return null;
+        }
+        return User.findOne(req.session.userId);
+    }
+
+    @Mutation(() => Boolean)
     logout(@Ctx() { req, res }: MyContext): Promise<boolean> {
         return new Promise((resolve) =>
             req.session.destroy((err) => {
                 res.clearCookie(cookieName);
                 if (err) {
-                    console.log("Logout Error:", err); //! Error Handling
+                    console.log("Logout Error:", err);
                     resolve(false);
                     return;
                 }

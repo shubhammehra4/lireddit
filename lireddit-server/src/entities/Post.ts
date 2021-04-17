@@ -1,4 +1,4 @@
-import { Field, ID, Int, ObjectType } from "type-graphql";
+import { Field, Int, ObjectType } from "type-graphql";
 import {
     BaseEntity,
     Column,
@@ -9,13 +9,14 @@ import {
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from "typeorm";
-import { Updoot } from "./Updoot";
+import { Vote } from "./Vote";
 import { User } from "./User";
+import { Comment } from "./Comment";
 
 @ObjectType()
 @Entity()
 export class Post extends BaseEntity {
-    @Field(() => ID)
+    @Field(() => Int)
     @PrimaryGeneratedColumn()
     id!: number;
 
@@ -31,6 +32,10 @@ export class Post extends BaseEntity {
     @Column({ type: "int", default: 0 })
     points!: number;
 
+    @Field(() => Int)
+    @Column({ type: "int", default: 0 })
+    commentCount!: number;
+
     @Field(() => Int, { nullable: true })
     voteStatus: number | null;
 
@@ -42,8 +47,12 @@ export class Post extends BaseEntity {
     @ManyToOne(() => User, (user) => user.posts)
     creator: User;
 
-    @OneToMany(() => Updoot, (updoot) => updoot.user)
-    updoots: Updoot[];
+    @OneToMany(() => Vote, (vote) => vote.user)
+    votes: Vote[];
+
+    @Field(() => [Comment])
+    @OneToMany(() => Comment, (comment) => comment.post)
+    comments: Comment[];
 
     @Field(() => String)
     @CreateDateColumn()
@@ -53,27 +62,3 @@ export class Post extends BaseEntity {
     @UpdateDateColumn()
     updatedAt: Date;
 }
-
-// @ObjectType()
-// export class BasePost {
-//     @Field(() => ID)
-//     id!: number;
-
-//     @Field()
-//     title!: string;
-
-//     @Field()
-//     text!: string;
-
-//     @Field(() => Int)
-//     points!: number;
-
-//     @Field(() => BaseUser)
-//     creator: BaseUser;
-
-//     @Field(() => String)
-//     createdAt: Date;
-
-//     @Field(() => String)
-//     updatedAt: Date;
-// }

@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-export async function sendEmail(to: string, text: string) {
+export async function sendEmail(to: string, text: string, subject?: string) {
     let testAccount = await nodemailer.createTestAccount();
 
     console.log(testAccount);
@@ -9,16 +9,16 @@ export async function sendEmail(to: string, text: string) {
         port: 587,
         secure: false, // true for 465, false for other ports
         auth: {
-            user: testAccount.user, // generated ethereal user
-            pass: testAccount.pass, // generated ethereal password
+            user: testAccount.user,
+            pass: testAccount.pass,
         },
     });
 
     let info = await transporter.sendMail({
-        from: '"Fred Foo 👻" <foo@example.com>', // sender address
-        to, // list of receivers
-        subject: "Change Password", // Subject line
-        html: `<b>${text}</b>`, // html body
+        from: "Lireddit",
+        to,
+        subject: subject ? subject : "LiReddit",
+        html: `<b>${text}</b>`,
     });
 
     console.log("Message sent: %s", info.messageId);

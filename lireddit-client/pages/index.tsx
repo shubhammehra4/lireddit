@@ -11,8 +11,8 @@ import {
 import { withUrqlClient } from "next-urql";
 import NextLink from "next/link";
 import React, { useState } from "react";
-import { MdDelete } from "react-icons/md";
 import { BiEdit } from "react-icons/bi";
+import { MdDelete } from "react-icons/md";
 import UpdootSection from "../components/UpdootSection";
 import Wrapper from "../components/Wrapper";
 import {
@@ -95,7 +95,7 @@ const Home: React.FC<{}> = ({}) => {
                                                     background="transparent"
                                                     onClick={() => {
                                                         deletePost({
-                                                            id: parseInt(p.id),
+                                                            id: p.id,
                                                         });
                                                     }}
                                                 />

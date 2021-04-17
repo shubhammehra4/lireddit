@@ -5,19 +5,19 @@ import { User } from "./User";
 
 @ObjectType()
 @Entity()
-export class Updoot extends BaseEntity {
+export class Vote extends BaseEntity {
     @Column({ type: "int" })
     value: number;
 
     @PrimaryColumn()
-    userId!: number;
+    userId: number;
 
-    @ManyToOne(() => User, (user) => user.updoots)
+    @ManyToOne(() => User, (user) => user.votes)
     user: User;
 
     @PrimaryColumn()
     postId: number;
 
-    @ManyToOne(() => Post, (post) => post.updoots, { onDelete: "CASCADE" })
+    @ManyToOne(() => Post, (post) => post.votes, { onDelete: "CASCADE" })
     post: Post;
 }

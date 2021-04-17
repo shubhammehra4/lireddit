@@ -1,16 +1,14 @@
 import "reflect-metadata";
-import dotenv from "dotenv";
-dotenv.config();
-import path from "path";
 import { ApolloServer } from "apollo-server-express";
 import connectRedis from "connect-redis";
 import cors from "cors";
 import express from "express";
 import session from "express-session";
 import Redis from "ioredis";
+import path from "path";
+import pino from "pino";
 import { buildSchema } from "type-graphql";
 import { createConnection } from "typeorm";
-import pino from "pino";
 import {
     clientURL,
     cookieName,
@@ -19,15 +17,16 @@ import {
     sessionSecret,
     __prod__,
 } from "./constants";
+import { Comment } from "./entities/Comment";
 import { Post } from "./entities/Post";
 import { User } from "./entities/User";
+import { Vote } from "./entities/Vote";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
-import { Updoot } from "./entities/Updoot";
 
 const main = async () => {
-    //TODO: Move to ormconfig
     const conn = await createConnection({
+        //TODO: Move to ormconfig
         type: "postgres",
         database: "lireddit2",
         username: "postgres",
@@ -36,12 +35,10 @@ const main = async () => {
         synchronize: true,
         maxQueryExecutionTime: 250,
         migrations: [path.join(__dirname, "./migrations/*")],
-        entities: [Post, User, Updoot],
+        entities: [Post, User, Vote, Comment],
     });
 
     await conn.runMigrations();
-
-    // await Post.delete({});
 
     const app = express();
 
@@ -81,8 +78,6 @@ const main = async () => {
             req,
             res,
             redis,
-            // userLoader: createUserLoader(),
-            // updootStatusLoader: createVoteStatusLoader(),
         }),
     });
 
@@ -117,8 +112,10 @@ const main = async () => {
     apolloServer.applyMiddleware({ app, cors: false });
 
     app.listen(port, () => {
+        console.log("");
         console.log(`🚀 Server Running.........`);
         console.log(`http://localhost:4000/graphql`);
+        console.log("");
     });
 };
 

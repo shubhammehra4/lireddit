@@ -2,7 +2,6 @@ import {
     Arg,
     Ctx,
     FieldResolver,
-    ID,
     Int,
     Mutation,
     Query,
@@ -12,11 +11,12 @@ import {
 } from "type-graphql";
 import { getConnection } from "typeorm";
 import { Post } from "../entities/Post";
-import { Updoot } from "../entities/Updoot";
+import { Vote } from "../entities/Vote";
+import { Comment } from "../entities/Comment";
 import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
+import { PostInput } from "./inputs/PostInput";
 import { PaginatedPosts } from "./post/PaginatedPosts";
-import { PostInput } from "./post/PostInput";
 
 @Resolver(Post)
 export class PostResolver {
@@ -49,57 +49,6 @@ export class PostResolver {
     //     return updoot ? updoot.value : null;
     // }
 
-    @Mutation(() => Boolean)
-    @UseMiddleware(isAuth)
-    async vote(
-        @Arg("postId", () => ID) postId: number,
-        @Arg("value", () => Int) value: number,
-        @Ctx() { req }: MyContext
-    ) {
-        const { userId } = req.session;
-
-        if (value === 1 || value === -1) {
-            const updoot = await Updoot.findOne({ where: { postId, userId } });
-
-            if (updoot && updoot.value !== value) {
-                await getConnection().transaction(async (tm) => {
-                    await tm.query(
-                        `
-                    UPDATE updoot SET value = $1
-                    WHERE "postId" = $2 and "userId" = $3
-                `,
-                        [value, postId, userId]
-                    );
-
-                    await tm.query(
-                        `
-                    UPDATE post SET points = points + $1 WHERE id = $2
-                `,
-                        [2 * value, postId]
-                    );
-                });
-            } else if (!updoot) {
-                await getConnection().transaction(async (tm) => {
-                    await tm.query(
-                        `
-                INSERT INTO updoot ("userId", "postId", "value") 
-                VALUES ($1,$2,$3)
-                `,
-                        [userId, postId, value]
-                    );
-                    await tm.query(
-                        `
-                    UPDATE post SET points = points + $1 WHERE id = $2
-                `,
-                        [value, postId]
-                    );
-                });
-            }
-        }
-
-        return true;
-    }
-
     @Query(() => PaginatedPosts)
     async posts(
         @Arg("limit", () => Int) limit: number,
@@ -129,7 +78,7 @@ export class PostResolver {
               ) creator,
             ${
                 req.session.userId
-                    ? '(select value from updoot where "userId" = $2 and "postId" = p.id) "voteStatus"'
+                    ? '(select value FROM vote WHERE "userId" = $2 AND "postId" = p.id) "voteStatus"'
                     : 'null as "voteStatus"'
             }
             FROM post p
@@ -140,17 +89,6 @@ export class PostResolver {
         `,
             replacements
         );
-        // const qb = getConnection()
-        //     .getRepository(Post)
-        //     .createQueryBuilder("p")
-        //     .innerJoinAndSelect("p.creator", "u", 'u.id =p."creatorId"')
-        //     .orderBy('p."createdAt"', "DESC")
-        //     .take(realLimitPlusOne);
-        // if (cursor) {
-        //     qb.where('p."createdAt"< :cursor', {
-        //         cursor: new Date(parseInt(cursor)),
-        //     });
-        // }
         return {
             posts: posts.slice(0, realLimit),
             hasMore: posts.length === realLimitPlusOne,
@@ -158,8 +96,73 @@ export class PostResolver {
     }
 
     @Query(() => Post, { nullable: true })
-    post(@Arg("id", () => ID) id: number): Promise<Post | undefined> {
-        return Post.findOne(id, { relations: ["creator"] });
+    async post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
+        return await getConnection()
+            .createQueryBuilder()
+            .select([
+                "post",
+                "creator.id",
+                "creator.username",
+                "comments.id",
+                "comments.comment",
+                "comments.createdAt",
+                "comments.parentCommentId",
+            ])
+            .from(Post, "post")
+            .where("post.id=:id", { id })
+            .innerJoin("post.creator", "creator")
+            .innerJoin("post.comments", "comments")
+            .getOne();
+    }
+
+    @Mutation(() => Boolean)
+    @UseMiddleware(isAuth)
+    async vote(
+        @Arg("postId", () => Int) postId: number,
+        @Arg("value", () => Int) value: number,
+        @Ctx() { req }: MyContext
+    ) {
+        const { userId } = req.session;
+
+        if (value === 1 || value === -1) {
+            const vote = await Vote.findOne({ where: { postId, userId } });
+
+            if (vote && vote.value !== value) {
+                await getConnection().transaction(async (tm) => {
+                    await tm.query(
+                        `
+                        UPDATE vote SET value = $1
+                        WHERE "postId" = $2 and "userId" = $3
+                    `,
+                        [value, postId, userId]
+                    );
+
+                    await tm.query(
+                        `
+                        UPDATE post SET points = points + $1 WHERE id = $2
+                    `,
+                        [2 * value, postId]
+                    );
+                });
+            } else if (!vote) {
+                await getConnection().transaction(async (tm) => {
+                    await tm.query(
+                        `
+                        INSERT INTO vote ("userId", "postId", "value") 
+                        VALUES ($1,$2,$3)
+                    `,
+                        [userId, postId, value]
+                    );
+                    await tm.query(
+                        `
+                        UPDATE post SET points = points + $1 WHERE id = $2
+                    `,
+                        [value, postId]
+                    );
+                });
+            }
+        }
+        return true;
     }
 
     @Mutation(() => Post)
@@ -168,10 +171,18 @@ export class PostResolver {
         @Arg("input") input: PostInput,
         @Ctx() { req }: MyContext
     ): Promise<Post> {
-        return Post.create({
-            ...input,
-            creatorId: req.session.userId,
-        }).save();
+        const newPost = await getConnection()
+            .createQueryBuilder()
+            .insert()
+            .into(Post)
+            .values({
+                ...input,
+                creatorId: req.session.userId,
+            })
+            .returning(["id", "title", "text"])
+            .execute();
+
+        return newPost.raw[0];
     }
 
     @Mutation(() => Post, { nullable: true })
@@ -202,6 +213,27 @@ export class PostResolver {
         @Ctx() { req }: MyContext
     ): Promise<boolean> {
         await Post.delete({ id, creatorId: req.session.userId });
+        return true;
+    }
+
+    @Mutation(() => Boolean)
+    @UseMiddleware(isAuth)
+    async createComment(
+        @Arg("comment") comment: string,
+        @Arg("postId", () => Int) postId: number,
+        @Arg("parentCommentId", { nullable: true })
+        parentCommentId: number,
+        @Ctx() { req }: MyContext
+    ) {
+        const { userId } = req.session;
+
+        await getConnection()
+            .createQueryBuilder()
+            .insert()
+            .into(Comment)
+            .values({ comment, postId, userId, parentCommentId })
+            .execute();
+
         return true;
     }
 }

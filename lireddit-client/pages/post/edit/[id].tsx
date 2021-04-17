@@ -21,9 +21,10 @@ import { useIsAuth } from "../../../utils/useIsAuth";
 
 const EditPost: React.FC<{}> = ({}) => {
     const router = useRouter();
-    const postId = typeof router.query.id === "string" ? router.query.id : "-1";
+    const postId =
+        typeof router.query.id === "string" ? parseInt(router.query.id) : -1;
     const [{ data, fetching, error }] = usePostQuery({
-        pause: postId === "-1",
+        pause: postId === -1,
         variables: {
             id: postId,
         },
@@ -60,7 +61,7 @@ const EditPost: React.FC<{}> = ({}) => {
     });
 
     const onSubmit = async (values: PostInput) => {
-        await updatePost({ id: parseInt(postId), ...values });
+        await updatePost({ id: postId, ...values });
         router.back();
     };
 

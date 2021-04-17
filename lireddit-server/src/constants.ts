@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 export const __prod__ = process.env.NODE_ENV === "production";
 export const port = process.env.PORT!;
 export const redisHost = process.env.REDIS_HOST!;

@@ -1,4 +1,4 @@
-import { RegisterInput } from "src/resolvers/register/RegisterInput";
+import { RegisterInput } from "src/resolvers/inputs/RegisterInput";
 
 export const validateRegister = (input: RegisterInput) => {
     if (input.email.length <= 4 || !input.email.includes("@")) {

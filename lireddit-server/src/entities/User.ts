@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType } from "type-graphql";
+import { Field, Int, ObjectType } from "type-graphql";
 import {
     BaseEntity,
     Column,
@@ -8,13 +8,14 @@ import {
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from "typeorm";
+import { Comment } from "./Comment";
 import { Post } from "./Post";
-import { Updoot } from "./Updoot";
+import { Vote } from "./Vote";
 
 @ObjectType()
 @Entity()
 export class User extends BaseEntity {
-    @Field(() => ID)
+    @Field(() => Int)
     @PrimaryGeneratedColumn()
     id!: number;
 
@@ -32,8 +33,11 @@ export class User extends BaseEntity {
     @OneToMany(() => Post, (post) => post.creator)
     posts: Post[];
 
-    @OneToMany(() => Updoot, (updoot) => updoot.user)
-    updoots: Updoot[];
+    @OneToMany(() => Vote, (vote) => vote.user)
+    votes: Vote[];
+
+    @OneToMany(() => Comment, (comment) => comment.user)
+    comments: Comment[];
 
     @Field(() => String)
     @CreateDateColumn()
@@ -43,12 +47,3 @@ export class User extends BaseEntity {
     @UpdateDateColumn()
     updatedAt: Date;
 }
-
-// @ObjectType()
-// export class BaseUser {
-//     @Field(() => ID)
-//     id!: number;
-
-//     @Field()
-//     username!: string;
-// }

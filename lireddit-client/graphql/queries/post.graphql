@@ -1,4 +1,4 @@
-query Post($id: ID!) {
+query Post($id: Int!) {
     post(id: $id) {
         id
         title

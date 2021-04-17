@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import { Updoot } from "src/entities/Updoot";
+import { Updoot } from "src/entities/Vote";
 
 export const createVoteStatusLoader = () =>
     new DataLoader<{ postId: number; userId: number }, Updoot | null>(
