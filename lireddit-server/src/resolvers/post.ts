@@ -72,17 +72,13 @@ export class PostResolver {
         const posts = await getConnection().query(
             `
             SELECT p.*,
-            json_build_object(
-              'id', u.id,
-              'username', u.username
-              ) creator,
+            json_build_object( 'id', u.id, 'username', u.username ) creator,
             ${
                 req.session.userId
-                    ? '(select value FROM vote WHERE "userId" = $2 AND "postId" = p.id) "voteStatus"'
+                    ? '(SELECT VALUE FROM vote WHERE "userId" = $2 AND "postId" = p.id) "voteStatus"'
                     : 'null as "voteStatus"'
             }
-            FROM post p
-            INNER JOIN public.user u on u.id = p."creatorId"
+            FROM post p INNER JOIN public.user u on u.id = p."creatorId"
             ${cursor ? `WHERE p."createdAt" < $${cursorIdx}` : ""}
             ORDER BY p."createdAt" DESC
             LIMIT $1
@@ -110,8 +106,8 @@ export class PostResolver {
             ])
             .from(Post, "post")
             .where("post.id=:id", { id })
-            .innerJoin("post.creator", "creator")
-            .innerJoin("post.comments", "comments")
+            .leftJoin("post.creator", "creator")
+            .leftJoin("post.comments", "comments")
             .getOne();
     }
 
@@ -221,18 +217,22 @@ export class PostResolver {
     async createComment(
         @Arg("comment") comment: string,
         @Arg("postId", () => Int) postId: number,
-        @Arg("parentCommentId", { nullable: true })
+        @Arg("parentCommentId", () => Int, { nullable: true })
         parentCommentId: number,
         @Ctx() { req }: MyContext
     ) {
         const { userId } = req.session;
 
-        await getConnection()
-            .createQueryBuilder()
-            .insert()
-            .into(Comment)
-            .values({ comment, postId, userId, parentCommentId })
-            .execute();
+        await getConnection().transaction(async (tm) => {
+            await tm.insert(Comment, {
+                comment,
+                postId,
+                userId,
+                parentCommentId,
+            });
+
+            await tm.increment(Post, { id: postId }, "commentCount", 1);
+        });
 
         return true;
     }

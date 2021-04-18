@@ -23,7 +23,7 @@ export class Comment extends BaseEntity {
     @Column({ type: "text" })
     comment: string;
 
-    @Column()
+    @PrimaryColumn()
     userId: number;
 
     @Field()
