@@ -23,6 +23,8 @@ import { User } from "./entities/User";
 import { Vote } from "./entities/Vote";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
+import { createUserLoader } from "./utils/createUserLoader";
+import { createVoteStatusLoader } from "./utils/createVoteStatusLoader";
 
 const main = async () => {
     const conn = await createConnection({
@@ -78,6 +80,8 @@ const main = async () => {
             req,
             res,
             redis,
+            userLoader: createUserLoader(),
+            voteStatusLoader: createVoteStatusLoader(),
         }),
     });
 

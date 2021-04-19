@@ -28,62 +28,50 @@ export class PostResolver {
         return root.text.slice(0, 50) + "...";
     }
 
-    //? Alternative to inner join but requires data loaders
+    //? Alternative to inner join with data loaders
     // @FieldResolver(() => User)
     // creator(@Root() post: Post, @Ctx() { userLoader }: MyContext) {
     //     return userLoader.load(post.creatorId);
     // }
 
-    // @FieldResolver(() => Int, { nullable: true })
-    // async voteStatus(
-    //     @Root() post: Post,
-    //     @Ctx() { updootStatusLoader, req }: MyContext
-    // ) {
-    //     if (!req.session.userId) {
-    //         return null;
-    //     }
-    //     const updoot = await updootStatusLoader.load({
-    //         postId: post.id,
-    //         userId: req.session.userId,
-    //     });
-    //     return updoot ? updoot.value : null;
-    // }
+    @FieldResolver(() => Int, { nullable: true })
+    async voteStatus(
+        @Root() post: Post,
+        @Ctx() { voteStatusLoader, req }: MyContext
+    ) {
+        if (!req.session.userId) return null;
+
+        const vote = await voteStatusLoader.load({
+            postId: post.id,
+            userId: req.session.userId,
+        });
+        return vote ? vote.value : null;
+    }
 
     @Query(() => PaginatedPosts)
     async posts(
         @Arg("limit", () => Int) limit: number,
-        @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
-        @Ctx() { req }: MyContext
+        @Arg("cursor", () => String, { nullable: true }) cursor: string | null
     ): Promise<PaginatedPosts> {
         const realLimit = Math.min(50, limit);
         const realLimitPlusOne = realLimit + 1;
 
-        const replacements: any[] = [realLimitPlusOne];
-        if (req.session.userId) {
-            replacements.push(req.session.userId);
-        }
-
-        let cursorIdx = 2;
+        const parameters: any[] = [realLimitPlusOne];
         if (cursor) {
-            replacements.push(new Date(parseInt(cursor)));
-            cursorIdx = replacements.length;
+            parameters.push(new Date(parseInt(cursor)));
         }
 
         const posts = await getConnection().query(
             `
             SELECT p.*,
-            json_build_object( 'id', u.id, 'username', u.username ) creator,
-            ${
-                req.session.userId
-                    ? '(SELECT VALUE FROM vote WHERE "userId" = $2 AND "postId" = p.id) "voteStatus"'
-                    : 'null as "voteStatus"'
-            }
-            FROM post p INNER JOIN public.user u on u.id = p."creatorId"
-            ${cursor ? `WHERE p."createdAt" < $${cursorIdx}` : ""}
+            json_build_object( 'id', u.id, 'username', u.username ) creator
+            FROM post p 
+            INNER JOIN public.user u on u.id = p."creatorId"
+            ${cursor ? `WHERE p."createdAt" < $2` : ""}
             ORDER BY p."createdAt" DESC
             LIMIT $1
         `,
-            replacements
+            parameters
         );
         return {
             posts: posts.slice(0, realLimit),
@@ -103,11 +91,13 @@ export class PostResolver {
                 "comments.comment",
                 "comments.createdAt",
                 "comments.parentCommentId",
+                "comments.user.username",
             ])
             .from(Post, "post")
             .where("post.id=:id", { id })
             .leftJoin("post.creator", "creator")
             .leftJoin("post.comments", "comments")
+            .innerJoin("comments.user", "comments.user")
             .getOne();
     }
 
