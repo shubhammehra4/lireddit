@@ -21,7 +21,7 @@ import { Comment } from "./entities/Comment";
 import { Post } from "./entities/Post";
 import { User } from "./entities/User";
 import { Vote } from "./entities/Vote";
-import { PostResolver } from "./resolvers/post";
+import { CommentResolver, PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 import { createUserLoader } from "./utils/createUserLoader";
 import { createVoteStatusLoader } from "./utils/createVoteStatusLoader";
@@ -73,7 +73,7 @@ const main = async () => {
 
     const apolloServer = new ApolloServer({
         schema: await buildSchema({
-            resolvers: [PostResolver, UserResolver],
+            resolvers: [PostResolver, UserResolver, CommentResolver],
             validate: false,
         }),
         context: ({ req, res }) => ({

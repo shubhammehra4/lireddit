@@ -48,6 +48,42 @@ export class PostResolver {
         return vote ? vote.value : null;
     }
 
+    @FieldResolver(() => [Comment], { nullable: true })
+    async comments(@Root() post: Post) {
+        return await getConnection().query(
+            `
+            SELECT
+                c.id,
+                c.comment,
+                c."createdAt",
+                json_build_object('username', u.username ) "user",
+                json_agg( json_build_object('id', r.id, 'comment', r.comment, 'createdAt' , r."createdAt"::TIMESTAMP, 'user', json_build_object('username', ur.username)) ) AS "childComments" 
+            FROM
+                "comment" AS c 
+                LEFT JOIN
+                    comment AS r 
+                    ON r."parentCommentId" = c.id 
+                INNER JOIN
+                    "user" AS u 
+                    ON u.id = c."userId" 
+                INNER JOIN
+                    "user" AS ur 
+                    ON ur.id = r."userId" 
+            WHERE
+                c."postId" = $1
+                AND c."parentCommentId" IS NULL 
+            GROUP BY
+                c.id,
+                c.comment,
+                c."createdAt",
+                u.id 
+            ORDER BY
+                c."createdAt" DESC
+        `,
+            [post.id]
+        );
+    }
+
     @Query(() => PaginatedPosts)
     async posts(
         @Arg("limit", () => Int) limit: number,
@@ -63,13 +99,18 @@ export class PostResolver {
 
         const posts = await getConnection().query(
             `
-            SELECT p.*,
-            json_build_object( 'id', u.id, 'username', u.username ) creator
-            FROM post p 
-            INNER JOIN public.user u on u.id = p."creatorId"
+            SELECT
+                p.*,
+                json_build_object( 'id', u.id, 'username', u.username ) creator 
+            FROM
+                post p 
+                INNER JOIN
+                    "user" u 
+                    ON u.id = p."creatorId" 
             ${cursor ? `WHERE p."createdAt" < $2` : ""}
-            ORDER BY p."createdAt" DESC
-            LIMIT $1
+            ORDER BY
+                p."createdAt" DESC LIMIT $1
+
         `,
             parameters
         );
@@ -83,22 +124,29 @@ export class PostResolver {
     async post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
         return await getConnection()
             .createQueryBuilder()
-            .select([
-                "post",
-                "creator.id",
-                "creator.username",
-                "comments.id",
-                "comments.comment",
-                "comments.createdAt",
-                "comments.parentCommentId",
-                "comments.user.username",
-            ])
+            .select(["post", "creator.id", "creator.username"])
             .from(Post, "post")
             .where("post.id=:id", { id })
             .leftJoin("post.creator", "creator")
-            .leftJoin("post.comments", "comments")
-            .innerJoin("comments.user", "comments.user")
             .getOne();
+
+        //? Replaced by fieldResolver comments
+        // .select([
+        //     "post",
+        //     "creator.id",
+        //     "creator.username",
+        //     "comments.id",
+        //     "comments.comment",
+        //     "comments.createdAt",
+        //     "comments.parentCommentId",
+        //     "comments.user.username",
+        // ])
+        // .from(Post, "post")
+        // .where("post.id=:id", { id })
+        // .leftJoin("post.creator", "creator")
+        // .leftJoin("post.comments", "comments")
+        // .leftJoin("comments.user", "comments.user")
+        // .getOne();
     }
 
     @Mutation(() => Boolean)
@@ -225,5 +273,18 @@ export class PostResolver {
         });
 
         return true;
+    }
+}
+
+//? Work Around for SQL query returning Date as string and graphql throwing an error
+//? for the comments(childComments) field resolver in Post
+@Resolver(Comment)
+export class CommentResolver {
+    @FieldResolver()
+    createdAt(@Root() comment: Comment) {
+        if (typeof comment.createdAt === "string")
+            return new Date(comment.createdAt);
+
+        return comment.createdAt;
     }
 }

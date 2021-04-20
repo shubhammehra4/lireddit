@@ -26,7 +26,6 @@ export class Comment extends BaseEntity {
     @PrimaryColumn()
     userId: number;
 
-    @Field()
     @PrimaryColumn()
     postId: number;
 
@@ -40,6 +39,9 @@ export class Comment extends BaseEntity {
     @Field({ nullable: true })
     @Column({ nullable: true })
     parentCommentId: number;
+
+    @Field(() => [Comment])
+    childComments: Comment[];
 
     @Field()
     @CreateDateColumn()
