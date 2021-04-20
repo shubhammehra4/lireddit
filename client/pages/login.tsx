@@ -68,8 +68,7 @@ const Login: React.FC<{}> = ({}) => {
                     </FormLabel>
                     <Input
                         id="usernameOrEmail"
-                        name="usernameOrEmail"
-                        ref={register({
+                        {...register("usernameOrEmail", {
                             required: "Username/Email is Required",
                         })}
                     />
@@ -83,9 +82,8 @@ const Login: React.FC<{}> = ({}) => {
                     <InputGroup>
                         <Input
                             id="password"
-                            name="password"
                             type={show ? "text" : "password"}
-                            ref={register({
+                            {...register("password", {
                                 required: "Password is Required",
                             })}
                         />

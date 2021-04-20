@@ -10,5 +10,15 @@ query Post($id: Int!) {
             id
             username
         }
+        commentCount
+        comments {
+            id
+            comment
+            createdAt
+            parentCommentId
+            user {
+                username
+            }
+        }
     }
 }

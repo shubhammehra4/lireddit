@@ -32,6 +32,7 @@ const Register: React.FC<{}> = ({}) => {
     async function onSubmit(values: RegisterInput) {
         clearErrors();
         const response = await reg({ input: values });
+
         if (response.data?.register.errors) {
             response.data.register.errors.map((err) => {
                 if (err.field === "username") {
@@ -54,12 +55,11 @@ const Register: React.FC<{}> = ({}) => {
     return (
         <Wrapper variant="small">
             <form onSubmit={handleSubmit(onSubmit)}>
-                <FormControl isInvalid={errors.email?.message !== undefined}>
+                <FormControl isInvalid={errors.email ? true : false}>
                     <FormLabel htmlFor="email">Email</FormLabel>
                     <Input
                         id="email"
-                        name="email"
-                        ref={register({
+                        {...register("email", {
                             required: "Email is Required",
                             maxLength: {
                                 value: 255,
@@ -75,12 +75,11 @@ const Register: React.FC<{}> = ({}) => {
                         {errors.email && errors.email.message}
                     </FormErrorMessage>
                 </FormControl>
-                <FormControl isInvalid={errors.username?.message !== undefined}>
+                <FormControl isInvalid={errors.username ? true : false}>
                     <FormLabel htmlFor="username">Username</FormLabel>
                     <Input
                         id="username"
-                        name="username"
-                        ref={register({
+                        {...register("username", {
                             required: "Username is Required",
                             minLength: {
                                 value: 2,
@@ -100,14 +99,12 @@ const Register: React.FC<{}> = ({}) => {
                         {errors.username && errors.username.message}
                     </FormErrorMessage>
                 </FormControl>
-                <FormControl isInvalid={errors.password?.message !== undefined}>
+                <FormControl isInvalid={errors.password ? true : false}>
                     <FormLabel htmlFor="password">Password</FormLabel>
                     <InputGroup>
                         <Input
                             id="password"
-                            name="password"
-                            type={show ? "text" : "password"}
-                            ref={register({
+                            {...register("password", {
                                 required: "Password is Required",
                                 minLength: {
                                     value: 7,
@@ -118,6 +115,7 @@ const Register: React.FC<{}> = ({}) => {
                                     message: "Password is too long!",
                                 },
                             })}
+                            type={show ? "text" : "password"}
                         />
                         <InputRightElement width="4.5rem">
                             <Button size="sm" onClick={handleClick}>

@@ -32,9 +32,17 @@ const Post: React.FC<PostProps> = ({}) => {
 
     return (
         <Wrapper>
-            <Heading>{data.post.title}</Heading>
+            <Heading>
+                {data.post.title} by {data.post.creator.username}
+            </Heading>
             <p>{data.post.text}</p>
-            {data.post.points}
+            {data.post.comments.map((comment) => {
+                return (
+                    <Box key={comment.id}>
+                        {comment.comment} by {comment.user.username}
+                    </Box>
+                );
+            })}
         </Wrapper>
     );
 };

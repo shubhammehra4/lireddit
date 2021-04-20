@@ -11,7 +11,7 @@ import {
 import { withUrqlClient } from "next-urql";
 import NextLink from "next/link";
 import React, { useState } from "react";
-import { BiEdit } from "react-icons/bi";
+import { BiCommentDetail, BiEdit } from "react-icons/bi";
 import { MdDelete } from "react-icons/md";
 import UpdootSection from "../components/UpdootSection";
 import Wrapper from "../components/Wrapper";
@@ -21,6 +21,7 @@ import {
     usePostsQuery,
 } from "../generated/graphql";
 import { createUrqlClient } from "../utils/createUrqlClient";
+import { formatDistance } from "date-fns";
 
 const Home: React.FC<{}> = ({}) => {
     const [pageVariables, setPageVariables] = useState({
@@ -37,6 +38,13 @@ const Home: React.FC<{}> = ({}) => {
     if (!fetching && !data) {
         return <h1>Somthing went Wrong!</h1>;
     }
+
+    const getDistance = (date: any) => {
+        return formatDistance(new Date(date - 0), new Date(), {
+            addSuffix: true,
+        });
+    };
+
     return (
         <Wrapper>
             <NextLink href="/create-post">
@@ -66,7 +74,10 @@ const Home: React.FC<{}> = ({}) => {
                                             </Heading>
                                         </Link>
                                     </NextLink>
-                                    <Text>by {p.creator.username}</Text>
+                                    <Text pl="2">
+                                        by {p.creator.username}{" "}
+                                        {getDistance(p.createdAt)}
+                                    </Text>
                                     <Flex alignItems="center">
                                         <Text flex={1} mt={4}>
                                             {p.textSnippet}
@@ -102,6 +113,20 @@ const Home: React.FC<{}> = ({}) => {
                                             </Box>
                                         )}
                                     </Flex>
+                                    <Box px="4" py="2">
+                                        {p.commentCount ? (
+                                            <Text>
+                                                {p.commentCount}
+
+                                                <BiCommentDetail
+                                                    style={{
+                                                        display: "inline-block",
+                                                        marginLeft: "5px",
+                                                    }}
+                                                />
+                                            </Text>
+                                        ) : null}
+                                    </Box>
                                 </Box>
                             </Flex>
                         )

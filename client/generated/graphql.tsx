@@ -12,7 +12,21 @@ export type Scalars = {
   Boolean: boolean;
   Int: number;
   Float: number;
+  /** The javascript `Date` as string. Type represents date and time as the ISO Date string. */
+  DateTime: any;
 };
+
+export type Comment = {
+  __typename?: 'Comment';
+  id: Scalars['Float'];
+  comment: Scalars['String'];
+  postId: Scalars['Float'];
+  user: User;
+  parentCommentId?: Maybe<Scalars['Float']>;
+  createdAt: Scalars['DateTime'];
+  updatedAt: Scalars['DateTime'];
+};
+
 
 export type FieldError = {
   __typename?: 'FieldError';
@@ -31,6 +45,7 @@ export type Mutation = {
   createPost: Post;
   updatePost?: Maybe<Post>;
   deletePost: Scalars['Boolean'];
+  createComment: Scalars['Boolean'];
   register: UserResponse;
   login: UserResponse;
   forgotPassword: Scalars['Boolean'];
@@ -59,6 +74,13 @@ export type MutationUpdatePostArgs = {
 
 export type MutationDeletePostArgs = {
   id: Scalars['Int'];
+};
+
+
+export type MutationCreateCommentArgs = {
+  parentCommentId?: Maybe<Scalars['Int']>;
+  postId: Scalars['Int'];
+  comment: Scalars['String'];
 };
 
 
@@ -94,9 +116,11 @@ export type Post = {
   title: Scalars['String'];
   text: Scalars['String'];
   points: Scalars['Int'];
+  commentCount: Scalars['Int'];
   voteStatus?: Maybe<Scalars['Int']>;
   creatorId: Scalars['Float'];
   creator: User;
+  comments: Array<Comment>;
   createdAt: Scalars['String'];
   updatedAt: Scalars['String'];
   textSnippet: Scalars['String'];
@@ -148,7 +172,7 @@ export type UserResponse = {
 
 export type PostSinppetFragment = (
   { __typename?: 'Post' }
-  & Pick<Post, 'id' | 'title' | 'textSnippet' | 'points' | 'createdAt' | 'voteStatus'>
+  & Pick<Post, 'id' | 'title' | 'textSnippet' | 'points' | 'createdAt' | 'voteStatus' | 'commentCount'>
   & { creator: (
     { __typename?: 'User' }
     & Pick<User, 'id' | 'username'>
@@ -303,11 +327,18 @@ export type PostQuery = (
   { __typename?: 'Query' }
   & { post?: Maybe<(
     { __typename?: 'Post' }
-    & Pick<Post, 'id' | 'title' | 'text' | 'points' | 'createdAt' | 'voteStatus'>
+    & Pick<Post, 'id' | 'title' | 'text' | 'points' | 'createdAt' | 'voteStatus' | 'commentCount'>
     & { creator: (
       { __typename?: 'User' }
       & Pick<User, 'id' | 'username'>
-    ) }
+    ), comments: Array<(
+      { __typename?: 'Comment' }
+      & Pick<Comment, 'id' | 'comment' | 'createdAt' | 'parentCommentId'>
+      & { user: (
+        { __typename?: 'User' }
+        & Pick<User, 'username'>
+      ) }
+    )> }
   )> }
 );
 
@@ -337,6 +368,7 @@ export const PostSinppetFragmentDoc = gql`
   points
   createdAt
   voteStatus
+  commentCount
   creator {
     id
     username
@@ -485,6 +517,16 @@ export const PostDocument = gql`
     creator {
       id
       username
+    }
+    commentCount
+    comments {
+      id
+      comment
+      createdAt
+      parentCommentId
+      user {
+        username
+      }
     }
   }
 }

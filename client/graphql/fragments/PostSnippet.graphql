@@ -5,6 +5,7 @@ fragment PostSinppet on Post {
     points
     createdAt
     voteStatus
+    commentCount
     creator {
         id
         username
