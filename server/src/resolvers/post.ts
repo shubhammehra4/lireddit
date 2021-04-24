@@ -10,9 +10,10 @@ import {
     UseMiddleware,
 } from "type-graphql";
 import { getConnection } from "typeorm";
-import { Post } from "../entities/Post";
-import { Vote } from "../entities/Vote";
-import { Comment } from "../entities/Comment";
+import Comment from "../entities/Comment";
+import Post from "../entities/Post";
+import User from "../entities/User";
+import Vote from "../entities/Vote";
 import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
 import { PostInput } from "./inputs/PostInput";
@@ -28,11 +29,10 @@ export class PostResolver {
         return root.text.slice(0, 50) + "...";
     }
 
-    //? Alternative to inner join with data loaders
-    // @FieldResolver(() => User)
-    // creator(@Root() post: Post, @Ctx() { userLoader }: MyContext) {
-    //     return userLoader.load(post.creatorId);
-    // }
+    @FieldResolver(() => User)
+    creator(@Root() post: Post, @Ctx() { userLoader }: MyContext) {
+        return userLoader.load(post.creatorId);
+    }
 
     @FieldResolver(() => Int, { nullable: true })
     async voteStatus(
@@ -52,33 +52,36 @@ export class PostResolver {
     async comments(@Root() post: Post) {
         return await getConnection().query(
             `
-            SELECT
-                c.id,
+            SELECT c.id,
                 c.comment,
                 c."createdAt",
-                json_build_object('username', u.username ) "user",
-                json_agg( json_build_object('id', r.id, 'comment', r.comment, 'createdAt' , r."createdAt"::TIMESTAMP, 'user', json_build_object('username', ur.username)) ) AS "childComments" 
-            FROM
-                "comment" AS c 
-                LEFT JOIN
-                    comment AS r 
-                    ON r."parentCommentId" = c.id 
-                INNER JOIN
-                    "user" AS u 
-                    ON u.id = c."userId" 
-                INNER JOIN
-                    "user" AS ur 
-                    ON ur.id = r."userId" 
-            WHERE
-                c."postId" = $1
-                AND c."parentCommentId" IS NULL 
-            GROUP BY
-                c.id,
+                c."userId",
+                CASE
+                    WHEN COUNT(r.id) > 0 THEN(
+                        json_agg(
+                            json_build_object(
+                                'id',
+                                r.id,
+                                'comment',
+                                r.comment,
+                                'createdAt',
+                                r."createdAt",
+                                'userId',
+                                r."userId"
+                            )
+                        )
+                    )
+                    ELSE NULL
+                END AS "childComments"
+            FROM "comment" AS c
+                LEFT JOIN comment AS r ON r."parentCommentId" = c.id
+            WHERE c."postId" = $1
+                AND c."parentCommentId" IS NULL
+            GROUP BY c.id,
                 c.comment,
                 c."createdAt",
-                u.id 
-            ORDER BY
-                c."createdAt" DESC
+                c."userId"
+            ORDER BY c."createdAt" DESC
         `,
             [post.id]
         );
@@ -99,18 +102,11 @@ export class PostResolver {
 
         const posts = await getConnection().query(
             `
-            SELECT
-                p.*,
-                json_build_object( 'id', u.id, 'username', u.username ) creator 
-            FROM
-                post p 
-                INNER JOIN
-                    "user" u 
-                    ON u.id = p."creatorId" 
+            SELECT p.*
+            FROM post p 
             ${cursor ? `WHERE p."createdAt" < $2` : ""}
             ORDER BY
                 p."createdAt" DESC LIMIT $1
-
         `,
             parameters
         );
@@ -129,24 +125,6 @@ export class PostResolver {
             .where("post.id=:id", { id })
             .leftJoin("post.creator", "creator")
             .getOne();
-
-        //? Replaced by fieldResolver comments
-        // .select([
-        //     "post",
-        //     "creator.id",
-        //     "creator.username",
-        //     "comments.id",
-        //     "comments.comment",
-        //     "comments.createdAt",
-        //     "comments.parentCommentId",
-        //     "comments.user.username",
-        // ])
-        // .from(Post, "post")
-        // .where("post.id=:id", { id })
-        // .leftJoin("post.creator", "creator")
-        // .leftJoin("post.comments", "comments")
-        // .leftJoin("comments.user", "comments.user")
-        // .getOne();
     }
 
     @Mutation(() => Boolean)
@@ -164,33 +142,23 @@ export class PostResolver {
             if (vote && vote.value !== value) {
                 await getConnection().transaction(async (tm) => {
                     await tm.query(
-                        `
-                        UPDATE vote SET value = $1
-                        WHERE "postId" = $2 and "userId" = $3
-                    `,
+                        `UPDATE vote SET value = $1 WHERE "postId" = $2 and "userId" = $3`,
                         [value, postId, userId]
                     );
 
                     await tm.query(
-                        `
-                        UPDATE post SET points = points + $1 WHERE id = $2
-                    `,
+                        `UPDATE post SET points = points + $1 WHERE id = $2`,
                         [2 * value, postId]
                     );
                 });
             } else if (!vote) {
                 await getConnection().transaction(async (tm) => {
                     await tm.query(
-                        `
-                        INSERT INTO vote ("userId", "postId", "value") 
-                        VALUES ($1,$2,$3)
-                    `,
+                        `INSERT INTO vote ("userId", "postId", "value") VALUES ($1,$2,$3)`,
                         [userId, postId, value]
                     );
                     await tm.query(
-                        `
-                        UPDATE post SET points = points + $1 WHERE id = $2
-                    `,
+                        `UPDATE post SET points = points + $1 WHERE id = $2`,
                         [value, postId]
                     );
                 });
@@ -256,18 +224,26 @@ export class PostResolver {
         @Arg("comment") comment: string,
         @Arg("postId", () => Int) postId: number,
         @Arg("parentCommentId", () => Int, { nullable: true })
-        parentCommentId: number,
+        parentCommentId: number | null,
         @Ctx() { req }: MyContext
     ) {
         const { userId } = req.session;
 
         await getConnection().transaction(async (tm) => {
-            await tm.insert(Comment, {
-                comment,
-                postId,
-                userId,
-                parentCommentId,
-            });
+            if (parentCommentId) {
+                await tm.insert(Comment, {
+                    comment,
+                    postId,
+                    userId,
+                    parentCommentId,
+                });
+            } else {
+                await tm.insert(Comment, {
+                    comment,
+                    postId,
+                    userId,
+                });
+            }
 
             await tm.increment(Post, { id: postId }, "commentCount", 1);
         });
@@ -276,10 +252,15 @@ export class PostResolver {
     }
 }
 
-//? Work Around for SQL query returning Date as string and graphql throwing an error
-//? for the comments(childComments) field resolver in Post
 @Resolver(Comment)
 export class CommentResolver {
+    @FieldResolver()
+    user(@Root() comment: Comment, @Ctx() { userLoader }: MyContext) {
+        return userLoader.load(comment.userId);
+    }
+
+    //? Work Around for SQL query returning Date as string and graphql throwing an error
+    //? for the comments(childComments) field resolver in Post
     @FieldResolver()
     createdAt(@Root() comment: Comment) {
         if (typeof comment.createdAt === "string")
@@ -288,3 +269,31 @@ export class CommentResolver {
         return comment.createdAt;
     }
 }
+
+// SELECT
+//                 c.id,
+//                 c.comment,
+//                 c."createdAt",
+//                 json_build_object('username', u.username ) "user",
+//                 json_agg( json_build_object('id', r.id, 'comment', r.comment, 'createdAt' , r."createdAt"::TIMESTAMP, 'user', json_build_object('username', ur.username)) ) AS "childComments"
+//             FROM
+//                 "comment" AS c
+//                 LEFT JOIN
+//                     comment AS r
+//                     ON r."parentCommentId" = c.id
+//                 INNER JOIN
+//                     "user" AS u
+//                     ON u.id = c."userId"
+//                 INNER JOIN
+//                     "user" AS ur
+//                     ON ur.id = r."userId"
+//             WHERE
+//                 c."postId" = $1
+//                 AND c."parentCommentId" IS NULL
+//             GROUP BY
+//                 c.id,
+//                 c.comment,
+//                 c."createdAt",
+//                 u.id
+//             ORDER BY
+//                 c."createdAt" DESC
