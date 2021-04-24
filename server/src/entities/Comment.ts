@@ -1,4 +1,4 @@
-import { Field, ObjectType } from "type-graphql";
+import { Field, Int, ObjectType } from "type-graphql";
 import {
     BaseEntity,
     Column,
@@ -9,13 +9,13 @@ import {
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from "typeorm";
-import { Post } from "./Post";
-import { User } from "./User";
+import Post from "./Post";
+import User from "./User";
 
 @ObjectType()
 @Entity()
-export class Comment extends BaseEntity {
-    @Field()
+export default class Comment extends BaseEntity {
+    @Field(() => Int)
     @PrimaryGeneratedColumn()
     id!: number;
 
@@ -36,12 +36,12 @@ export class Comment extends BaseEntity {
     @ManyToOne(() => Post, (post) => post.comments, { onDelete: "CASCADE" })
     post: Post;
 
-    @Field({ nullable: true })
-    @Column({ nullable: true })
+    @Field(() => Int, { nullable: true })
+    @Column({ nullable: true, type: "int" })
     parentCommentId: number;
 
-    @Field(() => [Comment])
-    childComments: Comment[];
+    @Field(() => [Comment], { nullable: true })
+    childComments: Partial<Comment>[];
 
     @Field()
     @CreateDateColumn()

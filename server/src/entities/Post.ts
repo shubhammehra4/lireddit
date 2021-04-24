@@ -9,13 +9,13 @@ import {
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from "typeorm";
-import { Comment } from "./Comment";
-import { User } from "./User";
-import { Vote } from "./Vote";
+import Comment from "./Comment";
+import User from "./User";
+import Vote from "./Vote";
 
 @ObjectType()
 @Entity()
-export class Post extends BaseEntity {
+export default class Post extends BaseEntity {
     @Field(() => Int)
     @PrimaryGeneratedColumn()
     id!: number;

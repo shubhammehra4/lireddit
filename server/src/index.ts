@@ -17,10 +17,10 @@ import {
     sessionSecret,
     __prod__,
 } from "./constants";
-import { Comment } from "./entities/Comment";
-import { Post } from "./entities/Post";
-import { User } from "./entities/User";
-import { Vote } from "./entities/Vote";
+import Comment from "./entities/Comment";
+import Post from "./entities/Post";
+import User from "./entities/User";
+import Vote from "./entities/Vote";
 import { CommentResolver, PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 import { createUserLoader } from "./utils/createUserLoader";
