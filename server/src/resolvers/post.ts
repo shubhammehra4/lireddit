@@ -120,10 +120,9 @@ export class PostResolver {
     async post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
         return await getConnection()
             .createQueryBuilder()
-            .select(["post", "creator.id", "creator.username"])
+            .select(["post"])
             .from(Post, "post")
             .where("post.id=:id", { id })
-            .leftJoin("post.creator", "creator")
             .getOne();
     }
 
