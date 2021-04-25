@@ -30,6 +30,7 @@ const EditPost: React.FC<{}> = ({}) => {
         },
     });
     const [, updatePost] = useUpdatePostMutation();
+    useIsAuth();
 
     if (fetching) {
         return (
@@ -50,7 +51,6 @@ const EditPost: React.FC<{}> = ({}) => {
             </Wrapper>
         );
     }
-    useIsAuth();
 
     const {
         register,
@@ -72,8 +72,7 @@ const EditPost: React.FC<{}> = ({}) => {
                     <FormLabel htmlFor="title">Title</FormLabel>
                     <Input
                         id="title"
-                        name="title"
-                        ref={register({
+                        {...register("title", {
                             required: "Title Required",
                         })}
                     />
@@ -85,8 +84,7 @@ const EditPost: React.FC<{}> = ({}) => {
                     <FormLabel htmlFor="text">Body</FormLabel>
                     <Textarea
                         id="text"
-                        name="text"
-                        ref={register({
+                        {...register("text", {
                             required: "This field cannot be left blank",
                         })}
                     />
@@ -108,4 +106,4 @@ const EditPost: React.FC<{}> = ({}) => {
     );
 };
 
-export default withUrqlClient(createUrqlClient, { ssr: true })(EditPost);
+export default withUrqlClient(createUrqlClient)(EditPost);

@@ -6,18 +6,27 @@ query Post($id: Int!) {
         points
         createdAt
         voteStatus
+        commentCount
         creator {
             id
             username
         }
-        commentCount
         comments {
             id
             comment
             createdAt
-            parentCommentId
             user {
+                id
                 username
+            }
+            childComments {
+                id
+                comment
+                createdAt
+                user {
+                    id
+                    username
+                }
             }
         }
     }

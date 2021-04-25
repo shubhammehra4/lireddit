@@ -39,8 +39,7 @@ const CretePost: React.FC<{}> = ({}) => {
                     <FormLabel htmlFor="title">Title</FormLabel>
                     <Input
                         id="title"
-                        name="title"
-                        ref={register({
+                        {...register("title", {
                             required: "Title Required",
                         })}
                     />
@@ -52,8 +51,7 @@ const CretePost: React.FC<{}> = ({}) => {
                     <FormLabel htmlFor="text">Body</FormLabel>
                     <Textarea
                         id="text"
-                        name="text"
-                        ref={register({
+                        {...register("text", {
                             required: "This field cannot be left blank",
                         })}
                     />

@@ -36,6 +36,7 @@ const Home: React.FC<{}> = ({}) => {
     const [, deletePost] = useDeletePostMutation();
 
     if (!fetching && !data) {
+        console.log(error);
         return <h1>Somthing went Wrong!</h1>;
     }
 

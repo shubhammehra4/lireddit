@@ -18,11 +18,11 @@ export type Scalars = {
 
 export type Comment = {
   __typename?: 'Comment';
-  id: Scalars['Float'];
+  id: Scalars['Int'];
   comment: Scalars['String'];
-  postId: Scalars['Float'];
   user: User;
-  parentCommentId?: Maybe<Scalars['Float']>;
+  parentCommentId?: Maybe<Scalars['Int']>;
+  childComments?: Maybe<Array<Comment>>;
   createdAt: Scalars['DateTime'];
   updatedAt: Scalars['DateTime'];
 };
@@ -41,16 +41,23 @@ export type LoginInput = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  createComment: Scalars['Boolean'];
   vote: Scalars['Boolean'];
   createPost: Post;
   updatePost?: Maybe<Post>;
   deletePost: Scalars['Boolean'];
-  createComment: Scalars['Boolean'];
   register: UserResponse;
   login: UserResponse;
   forgotPassword: Scalars['Boolean'];
   changePassword: UserResponse;
   logout: Scalars['Boolean'];
+};
+
+
+export type MutationCreateCommentArgs = {
+  parentCommentId?: Maybe<Scalars['Int']>;
+  postId: Scalars['Int'];
+  comment: Scalars['String'];
 };
 
 
@@ -74,13 +81,6 @@ export type MutationUpdatePostArgs = {
 
 export type MutationDeletePostArgs = {
   id: Scalars['Int'];
-};
-
-
-export type MutationCreateCommentArgs = {
-  parentCommentId?: Maybe<Scalars['Int']>;
-  postId: Scalars['Int'];
-  comment: Scalars['String'];
 };
 
 
@@ -214,6 +214,18 @@ export type ChangePasswordMutation = (
   ) }
 );
 
+export type CreateCommentMutationVariables = Exact<{
+  postId: Scalars['Int'];
+  comment: Scalars['String'];
+  parentCommentId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type CreateCommentMutation = (
+  { __typename?: 'Mutation' }
+  & Pick<Mutation, 'createComment'>
+);
+
 export type CreatePostMutationVariables = Exact<{
   input: PostInput;
 }>;
@@ -333,11 +345,18 @@ export type PostQuery = (
       & Pick<User, 'id' | 'username'>
     ), comments: Array<(
       { __typename?: 'Comment' }
-      & Pick<Comment, 'id' | 'comment' | 'createdAt' | 'parentCommentId'>
+      & Pick<Comment, 'id' | 'comment' | 'createdAt'>
       & { user: (
         { __typename?: 'User' }
-        & Pick<User, 'username'>
-      ) }
+        & Pick<User, 'id' | 'username'>
+      ), childComments?: Maybe<Array<(
+        { __typename?: 'Comment' }
+        & Pick<Comment, 'id' | 'comment' | 'createdAt'>
+        & { user: (
+          { __typename?: 'User' }
+          & Pick<User, 'id' | 'username'>
+        ) }
+      )>> }
     )> }
   )> }
 );
@@ -408,6 +427,19 @@ export const ChangePasswordDocument = gql`
 
 export function useChangePasswordMutation() {
   return Urql.useMutation<ChangePasswordMutation, ChangePasswordMutationVariables>(ChangePasswordDocument);
+};
+export const CreateCommentDocument = gql`
+    mutation CreateComment($postId: Int!, $comment: String!, $parentCommentId: Int) {
+  createComment(
+    postId: $postId
+    comment: $comment
+    parentCommentId: $parentCommentId
+  )
+}
+    `;
+
+export function useCreateCommentMutation() {
+  return Urql.useMutation<CreateCommentMutation, CreateCommentMutationVariables>(CreateCommentDocument);
 };
 export const CreatePostDocument = gql`
     mutation CreatePost($input: PostInput!) {
@@ -514,18 +546,27 @@ export const PostDocument = gql`
     points
     createdAt
     voteStatus
+    commentCount
     creator {
       id
       username
     }
-    commentCount
     comments {
       id
       comment
       createdAt
-      parentCommentId
       user {
+        id
         username
+      }
+      childComments {
+        id
+        comment
+        createdAt
+        user {
+          id
+          username
+        }
       }
     }
   }
