@@ -5,6 +5,8 @@ import { useLogoutMutation, useMeQuery } from "../generated/graphql";
 import { isServer } from "../utils/isServer";
 import { DarkModeSwitch } from "./DarkModeSwitch";
 import { useRouter } from "next/router";
+import { withUrqlClient } from "next-urql";
+import { createUrqlClient } from "../utils/createUrqlClient";
 
 const NavBar: React.FC<{}> = ({}) => {
     const router = useRouter();
@@ -64,4 +66,4 @@ const NavBar: React.FC<{}> = ({}) => {
     );
 };
 
-export default NavBar;
+export default withUrqlClient(createUrqlClient, { ssr: true })(NavBar);

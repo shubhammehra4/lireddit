@@ -1,13 +1,20 @@
 import { Flex, IconButton, Text } from "@chakra-ui/react";
+import { Maybe } from "graphql/jsutils/Maybe";
 import React from "react";
 import { ImArrowUp, ImArrowDown } from "react-icons/im";
 import { PostSinppetFragment, useVoteMutation } from "../generated/graphql";
 
-interface UpdootSectionProps {
-    post: PostSinppetFragment;
+interface VoteSectionProps {
+    voteStatus: Maybe<number> | undefined;
+    id: number;
+    points: number;
 }
 
-const UpdootSection: React.FC<UpdootSectionProps> = ({ post }) => {
+const VoteSection: React.FC<VoteSectionProps> = ({
+    id,
+    voteStatus,
+    points,
+}) => {
     const [, vote] = useVoteMutation();
     return (
         <Flex
@@ -19,31 +26,31 @@ const UpdootSection: React.FC<UpdootSectionProps> = ({ post }) => {
                 as={ImArrowUp}
                 aria-label="upvote"
                 size="xs"
-                color={post.voteStatus === 1 ? "green" : undefined}
+                color={voteStatus === 1 ? "green" : undefined}
                 background="transparent"
                 onClick={() => {
-                    if (post.voteStatus === 1) {
+                    if (voteStatus === 1) {
                         return;
                     }
-                    vote({ postId: post.id, value: 1 });
+                    vote({ postId: id, value: 1 });
                 }}
             />
-            <Text>{post.points}</Text>
+            <Text>{points}</Text>
             <IconButton
                 as={ImArrowDown}
                 aria-label="downvote"
                 size="xs"
                 background="transparent"
-                color={post.voteStatus === -1 ? "tomato" : undefined}
+                color={voteStatus === -1 ? "tomato" : undefined}
                 onClick={() => {
-                    if (post.voteStatus === -1) {
+                    if (voteStatus === -1) {
                         return;
                     }
-                    vote({ postId: post.id, value: -1 });
+                    vote({ postId: id, value: -1 });
                 }}
             />
         </Flex>
     );
 };
 
-export default UpdootSection;
+export default VoteSection;

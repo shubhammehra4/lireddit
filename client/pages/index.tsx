@@ -13,7 +13,7 @@ import NextLink from "next/link";
 import React, { useState } from "react";
 import { BiCommentDetail, BiEdit } from "react-icons/bi";
 import { MdDelete } from "react-icons/md";
-import UpdootSection from "../components/UpdootSection";
+import VoteSection from "../components/VoteSection";
 import Wrapper from "../components/Wrapper";
 import {
     useDeletePostMutation,
@@ -64,7 +64,11 @@ const Home: React.FC<{}> = ({}) => {
                                 p={4}
                                 shadow="md"
                                 borderWidth="1px">
-                                <UpdootSection post={p} />
+                                <VoteSection
+                                    id={p.id}
+                                    voteStatus={p.voteStatus}
+                                    points={p.points}
+                                />
                                 <Box ml={2} flex={1}>
                                     <NextLink
                                         href="/post/[id]"
