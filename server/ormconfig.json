@@ -1,0 +1,10 @@
+{
+    "type": "postgres",
+    "database": "lireddit2",
+    "username": "postgres",
+    "password": "qwerty",
+    "logging": "all",
+    "synchronize": true,
+    "migrations": ["dist/migrations/*.js"],
+    "entities": ["dist/entities/*.js"]
+}

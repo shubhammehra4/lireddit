@@ -70,9 +70,8 @@ const ChangePassword: NextPage = () => {
                     <InputGroup>
                         <Input
                             id="newPassword"
-                            name="newPassword"
                             type={show ? "text" : "password"}
-                            ref={register({
+                            {...register("newPassword", {
                                 required: "Password is Required",
                                 minLength: {
                                     value: 7,

@@ -8,7 +8,7 @@ import {
 } from "@chakra-ui/react";
 import { withUrqlClient } from "next-urql";
 import { useRouter } from "next/router";
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import Wrapper from "../../../components/Wrapper";
 import {
@@ -30,8 +30,13 @@ const EditPost: React.FC<{}> = ({}) => {
         },
     });
     const [, updatePost] = useUpdatePostMutation();
-    useIsAuth();
 
+    const onSubmit = async (values: PostInput) => {
+        await updatePost({ id: postId, ...values });
+        router.back();
+    };
+
+    useIsAuth();
     if (fetching) {
         return (
             <Wrapper>
@@ -59,11 +64,6 @@ const EditPost: React.FC<{}> = ({}) => {
     } = useForm<PostInput>({
         defaultValues: { text: data.post.text, title: data.post.title },
     });
-
-    const onSubmit = async (values: PostInput) => {
-        await updatePost({ id: postId, ...values });
-        router.back();
-    };
 
     return (
         <Wrapper variant="small">
@@ -106,4 +106,4 @@ const EditPost: React.FC<{}> = ({}) => {
     );
 };
 
-export default withUrqlClient(createUrqlClient)(EditPost);
+export default withUrqlClient(createUrqlClient, { ssr: true })(EditPost);

@@ -30,8 +30,7 @@ const ForgotPassword: React.FC<{}> = ({}) => {
                     <FormLabel htmlFor="email">Email</FormLabel>
                     <Input
                         id="email"
-                        name="email"
-                        ref={register({
+                        {...register("email", {
                             required: "Email Required",
                             maxLength: {
                                 value: 255,
